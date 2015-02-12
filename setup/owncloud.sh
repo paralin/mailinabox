@@ -15,18 +15,41 @@ apt_install \
 apt-get purge -qq -y owncloud*
 
 # Install ownCloud from source of this version:
-owncloud_ver=7.0.4
+owncloud_ver=8.0.0
 
 # Check if ownCloud dir exist, and check if version matches owncloud_ver (if either doesn't - install/upgrade)
 if [ ! -d /usr/local/lib/owncloud/ ] \
 	|| ! grep -q $owncloud_ver /usr/local/lib/owncloud/version.php; then
 
-	echo installing ownCloud...
+	# Clear out the existing ownCloud.
+	rm -f /tmp/owncloud-config.php
+	if [ ! -d /usr/local/lib/owncloud/ ]; then
+		echo installing ownCloud...
+	else
+		echo "upgrading ownCloud to $owncloud_ver (backing up existing ownCloud directory to /tmp/owncloud-backup-$$)..."
+		cp /usr/local/lib/owncloud/config/config.php /tmp/owncloud-config.php
+		mv /usr/local/lib/owncloud /tmp/owncloud-backup-$$
+	fi
+
+	# Download and extract ownCloud.
 	rm -f /tmp/owncloud.zip
 	wget -qO /tmp/owncloud.zip https://download.owncloud.org/community/owncloud-$owncloud_ver.zip
 	unzip -u -o -q /tmp/owncloud.zip -d /usr/local/lib #either extracts new or replaces current files
-	hide_output php /usr/local/lib/owncloud/occ upgrade #if OC is up-to-date it wont matter
 	rm -f /tmp/owncloud.zip
+
+	# Fix weird permissions.
+	chmod 755 /usr/local/lib/owncloud/{apps,config}
+
+	# Restore configuration file.
+	if [ -f /tmp/owncloud-config.php ]; then
+		mv /tmp/owncloud-config.php /usr/local/lib/owncloud/config/config.php
+	fi
+
+	# Make sure permissions are correct or the upgrade step won't run.
+	chown -R www-data.www-data $STORAGE_ROOT/owncloud /usr/local/lib/owncloud
+
+	# Run the upgrade script (if OC is up-to-date it wont matter).
+	hide_output sudo -u www-data php /usr/local/lib/owncloud/occ upgrade
 fi
 
 # ### Configuring ownCloud
@@ -106,8 +129,11 @@ fi
 # Enable/disable apps. Note that this must be done after the ownCloud setup.
 # The firstrunwizard gave Josh all sorts of problems, so disabling that.
 # user_external is what allows ownCloud to use IMAP for login.
-hide_output php /usr/local/lib/owncloud/console.php app:disable firstrunwizard
-hide_output php /usr/local/lib/owncloud/console.php app:enable user_external
+hide_output sudo -u www-data php /usr/local/lib/owncloud/console.php app:disable firstrunwizard
+hide_output sudo -u www-data php /usr/local/lib/owncloud/console.php app:enable user_external
+hide_output sudo -u www-data php /usr/local/lib/owncloud/console.php app:enable contacts
+hide_output sudo -u www-data php /usr/local/lib/owncloud/console.php app:enable calendar
+
 
 # Set PHP FPM values to support large file uploads
 # (semicolon is the comment character in this file, hashes produce deprecation warnings)
