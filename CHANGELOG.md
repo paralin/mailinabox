@@ -1,8 +1,23 @@
 CHANGELOG
 =========
 
-Development
------------
+In Development...
+-----------------
+
+Mail:
+
+* The Roundcube vacation_sieve plugin by @arodier is now installed to make it easier to set vacation auto-reply messages from within Roundcube.
+
+System:
+
+* Brute-force SSH and IMAP login attempts are now prevented by properly configuring fail2ban.
+
+Control panel:
+
+* The new check that system services are running mistakenly checked that the Dovecot Managesieve service is publicly accessible. Although the service binds to the public network interface we don't open the port in ufw. On some machines it seems that ufw blocks the connection from the status checks (which seems correct) and on some machines (mine) it doesn't, which is why I didn't notice the problem.
+
+v0.07 (February 28, 2015)
+-------------------------
 
 Mail:
 
@@ -30,8 +45,10 @@ Control panel:
 
 * Status checks now check that system services are actually running by pinging each port that should have something running on it.
 * The status checks are now parallelized so they may be a little faster.
+* The status check for MX records now allow any priority, in case an unusual setup is required.
 * The interface for setting website domain-specific directories is simplified.
 * The mail guide now says that to use Outlook, Outlook 2007 or later on Windows 7 and later is required.
+* External DNS settings now skip the special "_secondary_nameserver" key which is used for storing secondary NS information.
 
 Setup:
 
